@@ -8,25 +8,10 @@ import (
 	"net/http"
 	"strconv"
 	"tarefas/banco"
+	"tarefas/models"
 
 	"github.com/gorilla/mux"
 )
-
-//criar tarefas
-//buscar tarefas OK
-//buscar tarefa por ID
-//editar tarefa
-//apagar tarefa
-
-type tarefa struct {
-	ID              uint32 `json:"id"`
-	Titulo          string `json:"titulo"`
-	Descricao       string `json:"descricao"`
-	Data_vencimento string `json:"data_vencimento"`
-	Status          string `json:"status"`
-	Criado_em       string `json:"criado_em"`
-	Atualizado_em   string `json:"atualizado_em"`
-}
 
 func CriarTarefas(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
@@ -35,7 +20,7 @@ func CriarTarefas(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var tarefa tarefa
+	var tarefa models.Tarefa
 	if err := json.Unmarshal(body, &tarefa); err != nil {
 		http.Error(w, "Não foi possivel converter para JSON", http.StatusBadRequest)
 		return
@@ -92,9 +77,9 @@ func BuscarTarefas(w http.ResponseWriter, r *http.Request) {
 
 	defer db.Close()
 
-	var tarefas []tarefa
+	var tarefas []models.Tarefa
 	for rows.Next() {
-		var tarefa tarefa
+		var tarefa models.Tarefa
 
 		if err := rows.Scan(&tarefa.ID, &tarefa.Titulo, &tarefa.Descricao, &tarefa.Data_vencimento, &tarefa.Status, &tarefa.Criado_em, &tarefa.Atualizado_em); err != nil {
 			http.Error(w, "Erro ao buscar as tarefas", http.StatusBadRequest)
@@ -130,7 +115,7 @@ func BuscarTarefa(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Erro ao realizar o select", http.StatusBadRequest)
 	}
 
-	var tarefa tarefa
+	var tarefa models.Tarefa
 
 	if linha.Next() {
 		if err := linha.Scan(&tarefa.ID, &tarefa.Titulo, &tarefa.Descricao, &tarefa.Data_vencimento, &tarefa.Status, &tarefa.Criado_em, &tarefa.Atualizado_em); err != nil {
@@ -164,7 +149,7 @@ func AlteraTarefa(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var tarefa tarefa
+	var tarefa models.Tarefa
 	if err := json.Unmarshal(body, &tarefa); err != nil {
 		http.Error(w, "Erro ao converter para Json!", http.StatusBadRequest)
 		return
