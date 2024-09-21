@@ -25,13 +25,13 @@ type tarefa struct {
 func CriarTarefas(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, "Não foi possivel ler o corpo da requisição", http.StatusBadRequest)
+		http.Error(w, "Não foi possível ler o corpo da requisição", http.StatusBadRequest)
 		return
 	}
 
 	var tarefa tarefa
 	if err := json.Unmarshal(body, &tarefa); err != nil {
-		http.Error(w, "Não foi possivel converter para JSON", http.StatusBadRequest)
+		http.Error(w, "Não foi possível converter para JSON", http.StatusBadRequest)
 		return
 	}
 
@@ -43,31 +43,29 @@ func CriarTarefas(w http.ResponseWriter, r *http.Request) {
 
 	defer db.Close()
 
-	statement, err := db.Prepare("INSERT INTO tarefas(titulo, descricao, data_vencimento, status, criado_em, atualizado_em) VALUES (?, ?, ?, ?, ?, ?)")
-
+	statement, err := db.Prepare("INSERT INTO tarefas(titulo, descricao, data_vencimento, status) VALUES (?, ?, ?, ?)")
 	if err != nil {
-		log.Printf("Erro ao preparar a query SQL %v", err)
+		log.Printf("Erro ao preparar a query SQL: %v", err)
 		http.Error(w, "Erro ao inserir a tarefa", http.StatusInternalServerError)
 		return
 	}
 
 	defer statement.Close()
 
-	inserir, err := statement.Exec(tarefa.Titulo, tarefa.Descricao, tarefa.Data_vencimento, tarefa.Status, tarefa.Criado_em, tarefa.Atualizado_em)
+	inserir, err := statement.Exec(tarefa.Titulo, tarefa.Descricao, tarefa.Data_vencimento, tarefa.Status)
 	if err != nil {
-
 		http.Error(w, "Erro ao inserir", http.StatusInternalServerError)
 		return
 	}
 
 	idInserido, err := inserir.LastInsertId()
 	if err != nil {
-		log.Printf("Erro ao buscar o id %v", err)
+		log.Printf("Erro ao buscar o ID: %v", err)
 		return
 	}
 
-	w.Write([]byte(fmt.Sprintf("Tarefa inserida com sucesso! ID: %d", idInserido)))
 	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(fmt.Sprintf("Tarefa inserida com sucesso! ID: %d", idInserido)))
 }
 
 func BuscarTarefas(w http.ResponseWriter, r *http.Request) {
@@ -79,19 +77,21 @@ func BuscarTarefas(w http.ResponseWriter, r *http.Request) {
 
 	defer db.Close()
 
-	rows, err := db.Query("select * from tarefas")
+	rows, err := db.Query("SELECT * FROM tarefas")
 	if err != nil {
-		log.Fatal("Erro ao realizar o select", err)
+		log.Printf("Erro ao realizar o select: %v", err)
+		http.Error(w, "Erro ao buscar as tarefas", http.StatusInternalServerError)
+		return
 	}
 
-	defer db.Close()
+	defer rows.Close()
 
 	var tarefas []tarefa
 	for rows.Next() {
 		var tarefa tarefa
 
 		if err := rows.Scan(&tarefa.ID, &tarefa.Titulo, &tarefa.Descricao, &tarefa.Data_vencimento, &tarefa.Status, &tarefa.Criado_em, &tarefa.Atualizado_em); err != nil {
-			http.Error(w, "Erro ao buscar as tarefas", http.StatusBadRequest)
+			http.Error(w, "Erro ao escanear as tarefas", http.StatusBadRequest)
 			return
 		}
 
@@ -99,9 +99,8 @@ func BuscarTarefas(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-
 	if err := json.NewEncoder(w).Encode(tarefas); err != nil {
-		http.Error(w, "Erro ao onverter as tarefas", http.StatusBadRequest)
+		http.Error(w, "Erro ao converter as tarefas", http.StatusInternalServerError)
 		return
 	}
 }
@@ -127,7 +126,7 @@ func BuscarTarefa(w http.ResponseWriter, r *http.Request) {
 	var tarefa tarefa
 
 	if linha.Next() {
-		if err := linha.Scan(&tarefa.ID, &tarefa.Titulo, &tarefa.Descricao, &tarefa.Data_vencimento, &tarefa.Status, &tarefa.Criado_em, &tarefa.Atualizado_em); err != nil {
+		if err := linha.Scan(&tarefa.ID, &tarefa.Titulo, &tarefa.Descricao, &tarefa.Data_vencimento, &tarefa.Status); err != nil {
 			http.Error(w, "Erro ao scanear usuário", http.StatusBadRequest)
 			return
 		}
@@ -180,7 +179,7 @@ func AlteraTarefa(w http.ResponseWriter, r *http.Request) {
 
 	defer statement.Close()
 
-	if _, err := statement.Exec(tarefa.Titulo, tarefa.Descricao, tarefa.Data_vencimento, tarefa.Status, tarefa.Criado_em, tarefa.Atualizado_em, ID); err != nil {
+	if _, err := statement.Exec(tarefa.Titulo, tarefa.Descricao, tarefa.Data_vencimento, tarefa.Status, ID); err != nil {
 		log.Printf("Erro ao executar o insert %v", err)
 		http.Error(w, "Erro ao realizar o update", http.StatusInternalServerError)
 		return
