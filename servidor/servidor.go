@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"tarefas/banco"
+	"time"
 
 	"github.com/gorilla/mux"
 )
@@ -143,9 +144,9 @@ func BuscarTarefa(w http.ResponseWriter, r *http.Request) {
 }
 
 func AlteraTarefa(w http.ResponseWriter, r *http.Request) {
-	paramentros := mux.Vars(r)
+	parametros := mux.Vars(r)
 
-	ID, err := strconv.ParseUint(paramentros["id"], 10, 32)
+	ID, err := strconv.ParseUint(parametros["id"], 10, 32)
 	if err != nil {
 		http.Error(w, "Erro ao buscar o ID", http.StatusBadRequest)
 		return
@@ -159,7 +160,7 @@ func AlteraTarefa(w http.ResponseWriter, r *http.Request) {
 
 	var tarefa tarefa
 	if err := json.Unmarshal(body, &tarefa); err != nil {
-		http.Error(w, "Erro ao converter para Json!", http.StatusBadRequest)
+		http.Error(w, "Erro ao converter para JSON!", http.StatusBadRequest)
 		return
 	}
 
@@ -168,19 +169,19 @@ func AlteraTarefa(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Erro ao conectar no banco", http.StatusInternalServerError)
 		return
 	}
-
 	defer db.Close()
 
-	statement, err := db.Prepare("update tarefas set titulo = ?, descricao = ?, data_vencimento = ?, status = ?, criado_em = ?, atualizado_em = ? where id = ?")
+	// Prepare a query para atualizar a tarefa
+	statement, err := db.Prepare("UPDATE tarefas SET titulo = ?, descricao = ?, data_vencimento = ?, status = ?, atualizado_em = ? WHERE id = ?")
 	if err != nil {
 		http.Error(w, "Erro ao preparar o update", http.StatusInternalServerError)
 		return
 	}
-
 	defer statement.Close()
 
-	if _, err := statement.Exec(tarefa.Titulo, tarefa.Descricao, tarefa.Data_vencimento, tarefa.Status, ID); err != nil {
-		log.Printf("Erro ao executar o insert %v", err)
+	// Execute a atualização
+	if _, err := statement.Exec(tarefa.Titulo, tarefa.Descricao, tarefa.Data_vencimento, tarefa.Status, time.Now().Format("2006-01-02 15:04:05"), ID); err != nil {
+		log.Printf("Erro ao executar o update %v", err)
 		http.Error(w, "Erro ao realizar o update", http.StatusInternalServerError)
 		return
 	}
@@ -204,7 +205,7 @@ func DeletarTarefa(w http.ResponseWriter, r *http.Request) {
 
 	defer db.Close()
 
-	statement, err := db.Prepare("delete * from tarefas where id = ? ")
+	statement, err := db.Prepare("delete from tarefas where id = ? ")
 	if err != nil {
 		http.Error(w, "Erro ao preparar o delete", http.StatusInternalServerError)
 		return
